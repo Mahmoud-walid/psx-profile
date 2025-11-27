@@ -69,18 +69,6 @@ pwsh -NoLogo -Command "irm 'https://raw.githubusercontent.com/Mahmoud-walid/psx-
 
 ---
 
-## 📂 Repository Structure
-
-```
-psx-profile/
-│
-├── install.ps1
-├── Microsoft.PowerShell_profile.ps1
-└── README.md
-```
-
----
-
 ## 🛠 Requirements
 
 * Windows 10/11

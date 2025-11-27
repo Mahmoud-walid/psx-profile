@@ -100,13 +100,11 @@ function Get-PowerShell7-Open-Logs {
         return
     }
 
-    # ────────────── Table Headers ──────────────
     $header = "{0,-20} {1,-10} {2,-15} {3,-6} {4,-30} {5,-8} {6,-15}" -f `
         "Timestamp","User","Host","Admin","Path","Session","Machine"
     Write-Host $header -ForegroundColor Cyan
     Write-Host ("─" * 120) -ForegroundColor DarkGray
 
-    # ────────────── Table Rows ──────────────
     foreach ($log in $logs) {
         $line = "{0,-20} {1,-10} {2,-15} {3,-6} {4,-30} {5,-8} {6,-15}" -f `
             $log.Timestamp, $log.User, $log.Host, $log.Admin, $log.Path, $log.SessionID, $log.Machine
@@ -118,20 +116,15 @@ function Get-PowerShell7-Open-Logs {
         Write-Host $line -ForegroundColor $color
     }
 
-    Write-Host ""  # extra spacing
+    Write-Host ""  
 }
-
-
 
 # ────────────────────────────────
 # 💻 Fancy PowerShell Welcome Banner
 # ────────────────────────────────
-
-# Changing colors + Elegant divider
 Clear-Host
 
 $line = "═" * 60
-
 Write-Host ""
 Write-Host "╔$line╗" -ForegroundColor DarkCyan
 Write-Host "║" -NoNewline
@@ -140,7 +133,6 @@ Write-Host "║"
 Write-Host "╚$line╝" -ForegroundColor DarkCyan
 Write-Host ""
 
-# Write your name in a gradient of colors
 Start-Sleep -Milliseconds 200
 
 $banner = @(
@@ -168,18 +160,12 @@ foreach ($part in $banner) {
 
 Write-Host ""
 Write-Host ("═" * 60) -ForegroundColor DarkGray
-
 Write-Host ("🕒 " + (Get-Date).ToString("dddd, MMMM dd yyyy HH:mm:ss")) -ForegroundColor DarkCyan
 Write-Host ("📂 Current Directory: " + (Get-Location)) -ForegroundColor Gray
 Write-Host ("═" * 60) -ForegroundColor DarkGray
 Write-Host ""
 
-# ────────────────────────────────
-# 📊 PS7 Logs Summary under banner
-# ────────────────────────────────
-
 $logs = @()
-
 if (Test-Path $Global:PS7_LogFile) {
     $raw = Get-Content $Global:PS7_LogFile -Raw
     if ($raw.Trim() -ne "") {
@@ -187,24 +173,19 @@ if (Test-Path $Global:PS7_LogFile) {
     }
 }
 
-# Total logs saved
 Write-Host ("📊 Total PS7 Sessions Logged: " + $logs.Count) -ForegroundColor Cyan
-
-# Last 3 sessions
 $lastLogs = $logs | Select-Object -Last 3
-
 foreach ($log in $lastLogs) {
     if ($log.Admin) { $color = "Red" }
     elseif ($log.Host -eq "Unknown") { $color = "Yellow" }
     else { $color = "Green" }
-
     Write-Host "[$($log.Timestamp)] User: $($log.User) | Host: $($log.Host) | Admin: $($log.Admin)" -ForegroundColor $color
 }
+Write-Host ""
 
-Write-Host ""  # Extra spacing
-
-
-# Alias
+# ──────────────────────────────
+# 🔧 Aliases
+# ──────────────────────────────
 Set-Alias trae "C:\Users\modyw\AppData\Local\Programs\Trae\Trae.exe"
 Set-Alias pwsh-logs Get-PowerShell7-Open-Logs
 
@@ -213,3 +194,98 @@ Set-Alias pwsh-logs Get-PowerShell7-Open-Logs
 # ──────────────────────────────
 $env:POSH_THEMES_PATH = "$env:LOCALAPPDATA\oh-my-posh-themes"
 oh-my-posh init pwsh --config "$env:POSH_THEMES_PATH\paradox.omp.json" | Invoke-Expression
+
+# ──────────────────────────────
+# 🔹 PSX Profile Core Command
+# ──────────────────────────────
+function psx {
+    param(
+        [Alias("h")][switch]$help,
+        [Alias("v")][switch]$version,
+        [Alias("u")][switch]$update,
+        [Alias("r")][switch]$remove,
+        [Alias("d")][switch]$clearlogs,
+        [Alias("s")][switch]$status
+    )
+
+    $PSX_Version = "1.0.0"
+    $PSX_LogFile = Join-Path $env:LOCALAPPDATA "PS7Logs\ps7_open_logs.json"
+    $baseUrl = "https://raw.githubusercontent.com/<USER>/<REPO>/main"
+    $profileUrl = "$baseUrl/Microsoft.PowerShell_profile.ps1"
+
+    if ($help) {
+        Write-Host "`n🌀 PSX Profile Command Help" -ForegroundColor Cyan
+        Write-Host "Usage: psx [options]" -ForegroundColor Gray
+        Write-Host ""
+        Write-Host "Options:" -ForegroundColor Cyan
+        Write-Host "  -h, --help        Show this help message" -ForegroundColor Gray
+        Write-Host "  -v, --version     Show current psx-profile version" -ForegroundColor Gray
+        Write-Host "  -u, --update      Update psx-profile from GitHub" -ForegroundColor Gray
+        Write-Host "  -r, --remove      Uninstall profile (profile, logs, theme)" -ForegroundColor Gray
+        Write-Host "  -d, --clearlogs   Clear all PS7 session logs" -ForegroundColor Gray
+        Write-Host "  -s, --status      Show profile status and last logs summary" -ForegroundColor Gray
+        return
+    }
+
+    if ($version) { Write-Host "📌 psx-profile version: $PSX_Version" -ForegroundColor Cyan; return }
+    if ($clearlogs) { 
+        if (Test-Path $PSX_LogFile) { "[]" | Out-File -FilePath $PSX_LogFile -Encoding utf8 -Force; Write-Host "🗑 All PS7 logs cleared successfully." -ForegroundColor Yellow } 
+        else { Write-Host "⚠ Log file not found." -ForegroundColor DarkYellow }; return 
+    }
+
+    if ($update) {
+        Write-Host "🔄 Checking for updates..." -ForegroundColor Cyan
+        try {
+            $tmpFile = New-TemporaryFile
+            Invoke-WebRequest -Uri $profileUrl -OutFile $tmpFile -UseBasicParsing
+            $remoteContent = Get-Content $tmpFile -Raw
+            Remove-Item $tmpFile -Force
+
+            if ($remoteContent -match '\$PSX_Version\s*=\s*"([\d\.]+)"') {
+                $remoteVersion = $Matches[1]
+                if ($remoteVersion -ne $PSX_Version) {
+                    Write-Host "⬆ New version detected: $remoteVersion. Updating..." -ForegroundColor Green
+                    Invoke-WebRequest -Uri $profileUrl -OutFile $PROFILE -UseBasicParsing
+                    . $PROFILE
+                    Write-Host "✔ psx-profile updated to version $remoteVersion" -ForegroundColor Green
+                } else { Write-Host "✅ psx-profile is already up to date." -ForegroundColor Cyan }
+            } else { Write-Host "⚠ Could not detect remote version. Update skipped." -ForegroundColor DarkYellow }
+        } catch { Write-Host "❌ Update failed: $_" -ForegroundColor Red }
+        return
+    }
+
+    if ($remove) {
+        Write-Host "⚠ You are about to uninstall psx-profile..." -ForegroundColor Yellow
+        if (Test-Path $PROFILE) { Remove-Item $PROFILE -Force; Write-Host "✔ Profile removed." -ForegroundColor Green }
+        if (Test-Path $PSX_LogFile) { Remove-Item $PSX_LogFile -Force; Write-Host "✔ Logs removed." -ForegroundColor Green }
+        $themePath = "$env:LOCALAPPDATA\oh-my-posh-themes\paradox.omp.json"
+        if (Test-Path $themePath) { Remove-Item $themePath -Force; Write-Host "✔ Oh My Posh theme removed." -ForegroundColor Green }
+        Write-Host "✨ Uninstall complete. Restart PowerShell." -ForegroundColor Cyan
+        return
+    }
+
+    if ($status -or (-not ($help -or $version -or $update -or $remove -or $clearlogs))) {
+        Write-Host "🌀 psx-profile status:" -ForegroundColor Cyan
+        Write-Host "Version: $PSX_Version" -ForegroundColor Cyan
+        Write-Host "Profile Path: $PROFILE" -ForegroundColor Gray
+        Write-Host "Logs Path: $PSX_LogFile" -ForegroundColor Gray
+
+        $logs = @()
+        if (Test-Path $PSX_LogFile) {
+            $raw = Get-Content $PSX_LogFile -Raw
+            if ($raw.Trim() -ne "") { try { $logs = @($raw | ConvertFrom-Json) } catch {} }
+        }
+
+        if ($logs.Count -gt 0) {
+            Write-Host "`n📊 Last 3 PS7 sessions:" -ForegroundColor Cyan
+            $lastLogs = $logs | Select-Object -Last 3
+            foreach ($log in $lastLogs) {
+                if ($log.Admin) { $color = "Red" }
+                elseif ($log.Host -eq "Unknown") { $color = "Yellow" }
+                else { $color = "Green" }
+                Write-Host "[$($log.Timestamp)] User: $($log.User) | Host: $($log.Host) | Admin: $($log.Admin)" -ForegroundColor $color
+            }
+        } else { Write-Host "⚠ No logs found." -ForegroundColor DarkYellow }
+        return
+    }
+}

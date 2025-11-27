@@ -203,7 +203,8 @@ function psx {
         [Alias("r")][switch]$remove,
         [Alias("d")][switch]$clearlogs,
         [Alias("s")][switch]$status,
-        [Alias("n")][string]$name
+        [Alias("n")][string]$name,
+        [Alias("p")][switch]$pwshupdate
     )
 
     if ($PSBoundParameters.ContainsKey("name")) {
@@ -217,6 +218,26 @@ function psx {
     $baseUrl = "https://raw.githubusercontent.com/Mahmoud-walid/psx-profile/main"
     $profileUrl = "$baseUrl/Microsoft.PowerShell_profile.ps1"
 
+    if ($pwshupdate) {
+        $confirm = Read-Host "⚠ This will download and install the latest PowerShell 7. Continue? (Y/N)"
+        if ($confirm -notmatch "^[Yy]$") {
+            Write-Host "❌ Update cancelled." -ForegroundColor Yellow
+            return
+        }
+    
+        try {
+            $IsWindows = $PSVersionTable.OS -match "Windows"
+            if ($IsWindows) {
+                irm "https://raw.githubusercontent.com/Mahmoud-walid/psx-profile/main/update-pwsh.ps1" | iex
+            } else {
+                pwsh -c "irm 'https://raw.githubusercontent.com/Mahmoud-walid/psx-profile/main/update-pwsh.ps1' | iex"
+            }
+        } catch {
+            Write-Host "❌ PowerShell update failed: $_" -ForegroundColor Red
+        }
+        return
+    }
+    
     if ($help) {
         Write-Host "`n🌀 PSX Profile Command Help" -ForegroundColor Cyan
         Write-Host "Usage: psx [options]" -ForegroundColor Gray
@@ -293,6 +314,7 @@ function psx {
         return
     }
 }
+
 
 
 

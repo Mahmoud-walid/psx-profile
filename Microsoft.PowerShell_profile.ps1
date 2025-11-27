@@ -135,6 +135,12 @@ Write-Host ""
 
 Start-Sleep -Milliseconds 200
 
+# Default dynamic banner name (unless changed via psx -n)
+if (-not (Get-Variable PSX_Name -Scope Global -ErrorAction SilentlyContinue)) {
+    $Global:PSX_Name = "psx-profile"
+}
+$name = $Global:PSX_Name
+
 $colors = "Red","DarkRed","Yellow","Green","Cyan","Blue","Magenta","DarkMagenta","DarkYellow","Gray","White"
 $banner = @()
 for ($i=0; $i -lt $name.Length; $i++) {
@@ -142,10 +148,13 @@ for ($i=0; $i -lt $name.Length; $i++) {
     $banner += @{ text = $name[$i]; color = $color }
 }
 
+# Print animated banner based on dynamic name
 foreach ($part in $banner) {
     Write-Host -NoNewline $part.text -ForegroundColor $part.color
-    Start-Sleep -Milliseconds 80
+    Start-Sleep -Milliseconds 60
 }
+Write-Host ""   # Move to next line after banner
+
 
 Write-Host ""
 Write-Host ("═" * 60) -ForegroundColor DarkGray
@@ -194,8 +203,14 @@ function psx {
         [Alias("r")][switch]$remove,
         [Alias("d")][switch]$clearlogs,
         [Alias("s")][switch]$status,
-        [Alias("n")][string]$name = "psx-profile"
+        [Alias("n")][string]$name
     )
+
+    if ($PSBoundParameters.ContainsKey("name")) {
+        $Global:PSX_Name = $name
+        Write-Host "✔ Banner name updated to: $name" -ForegroundColor Green
+        return
+    }
 
     $PSX_Version = "1.0.0"
     $PSX_LogFile = Join-Path $env:LOCALAPPDATA "PS7Logs\ps7_open_logs.json"
@@ -278,5 +293,6 @@ function psx {
         return
     }
 }
+
 
 

@@ -64,7 +64,7 @@ Invoke-Safe -Message "Downloading Paradox theme from Oh My Posh official repo" -
 # 4️⃣ Download your profile
 # ------------------------------
 Invoke-Safe -Message "Downloading your PowerShell profile script" -Action {
-    $profileUrl = "https://raw.githubusercontent.com/<USER>/<REPO>/main/Microsoft.PowerShell_profile.ps1"
+    $profileUrl = "https://raw.githubusercontent.com/Mahmoud-walid/psx-profile/main/Microsoft.PowerShell_profile.ps1"
     Invoke-WebRequest -Uri $profileUrl -OutFile $PROFILE -UseBasicParsing
 }
 

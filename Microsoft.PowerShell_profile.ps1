@@ -135,23 +135,12 @@ Write-Host ""
 
 Start-Sleep -Milliseconds 200
 
-$banner = @(
-    @{ text = "M"; color = "Red" },
-    @{ text = "a"; color = "DarkRed" },
-    @{ text = "h"; color = "Yellow" },
-    @{ text = "m"; color = "Green" },
-    @{ text = "o"; color = "Cyan" },
-    @{ text = "u"; color = "Blue" },
-    @{ text = "d"; color = "Magenta" },
-    @{ text = "W"; color = "DarkMagenta" },
-    @{ text = "a"; color = "DarkYellow" },
-    @{ text = "l"; color = "Green" },
-    @{ text = "i"; color = "Cyan" },
-    @{ text = "d"; color = "DarkCyan" },
-    @{ text = "_"; color = "White" },
-    @{ text = "J"; color = "Red" },
-    @{ text = "S"; color = "DarkRed" }
-)
+$colors = "Red","DarkRed","Yellow","Green","Cyan","Blue","Magenta","DarkMagenta","DarkYellow","Gray","White"
+$banner = @()
+for ($i=0; $i -lt $name.Length; $i++) {
+    $color = $colors[$i % $colors.Count]
+    $banner += @{ text = $name[$i]; color = $color }
+}
 
 foreach ($part in $banner) {
     Write-Host -NoNewline $part.text -ForegroundColor $part.color
@@ -204,7 +193,8 @@ function psx {
         [Alias("u")][switch]$update,
         [Alias("r")][switch]$remove,
         [Alias("d")][switch]$clearlogs,
-        [Alias("s")][switch]$status
+        [Alias("s")][switch]$status,
+        [Alias("n")][string]$name = "psx-profile"
     )
 
     $PSX_Version = "1.0.0"
@@ -288,4 +278,5 @@ function psx {
         return
     }
 }
+
 

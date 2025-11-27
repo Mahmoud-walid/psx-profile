@@ -61,7 +61,7 @@ function Write-PS7OpenLog {
         $logs | ConvertTo-Json -Depth 5 |
             Out-File -FilePath $Global:PS7_LogFile -Encoding utf8 -Force
     }
-    catch {}
+    catch { Write-Host "⚠ Failed to write PS7 log: $_" -ForegroundColor DarkYellow }
 }
 
 Write-PS7OpenLog
@@ -151,7 +151,7 @@ for ($i=0; $i -lt $name.Length; $i++) {
 # Print animated banner based on dynamic name
 foreach ($part in $banner) {
     Write-Host -NoNewline $part.text -ForegroundColor $part.color
-    Start-Sleep -Milliseconds 60
+    Start-Sleep -Milliseconds ([Math]::Max(20, 60 - ($name.Length * 2)))
 }
 Write-Host ""   # Move to next line after banner
 
@@ -224,13 +224,12 @@ function psx {
             Write-Host "❌ Update cancelled." -ForegroundColor Yellow
             return
         }
-    
         try {
-            $IsWindows = $PSVersionTable.OS -match "Windows"
-            if ($IsWindows) {
-                irm "https://raw.githubusercontent.com/Mahmoud-walid/psx-profile/main/update-pwsh.ps1" | iex
+            $IsWin = $PSVersionTable.OS -match "Windows"
+            if ($IsWin) {
+                Invoke-RestMethod "https://raw.githubusercontent.com/Mahmoud-walid/psx-profile/main/update-pwsh.ps1" | Invoke-Expression
             } else {
-                pwsh -c "irm 'https://raw.githubusercontent.com/Mahmoud-walid/psx-profile/main/update-pwsh.ps1' | iex"
+                pwsh -c "Invoke-RestMethod 'https://raw.githubusercontent.com/Mahmoud-walid/psx-profile/main/update-pwsh.ps1' | Invoke-Expression"
             }
         } catch {
             Write-Host "❌ PowerShell update failed: $_" -ForegroundColor Red

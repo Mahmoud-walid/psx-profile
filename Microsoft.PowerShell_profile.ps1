@@ -186,7 +186,6 @@ Write-Host ""
 # ──────────────────────────────
 # 🔧 Aliases
 # ──────────────────────────────
-Set-Alias trae "C:\Users\modyw\AppData\Local\Programs\Trae\Trae.exe"
 Set-Alias pwsh-logs Get-PowerShell7-Open-Logs
 
 # ──────────────────────────────
@@ -210,7 +209,7 @@ function psx {
 
     $PSX_Version = "1.0.0"
     $PSX_LogFile = Join-Path $env:LOCALAPPDATA "PS7Logs\ps7_open_logs.json"
-    $baseUrl = "https://raw.githubusercontent.com/<USER>/<REPO>/main"
+    $baseUrl = "https://raw.githubusercontent.com/Mahmoud-walid/psx-profile/main"
     $profileUrl = "$baseUrl/Microsoft.PowerShell_profile.ps1"
 
     if ($help) {
@@ -289,3 +288,4 @@ function psx {
         return
     }
 }
+

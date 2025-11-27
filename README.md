@@ -15,7 +15,7 @@ psx-profile is a fully-custom, extensible PowerShell 7 profile designed to enhan
 Just run this command in PowerShell 7:
 
 ```powershell
-irm "https://raw.githubusercontent.com/<USER>/<REPO>/main/install.ps1" | iex
+irm "https://raw.githubusercontent.com/Mahmoud-walid/psx-profile/main/install.ps1" | iex
 ```
 
 This installer will:
@@ -56,7 +56,7 @@ The profile is designed to grow with future features.
 ## 🔄 Update to the Latest Version
 
 ```powershell
-pwsh -NoLogo -Command "irm 'https://raw.githubusercontent.com/<USER>/<REPO>/main/update.ps1' | iex"
+pwsh -NoLogo -Command "irm 'https://raw.githubusercontent.com/Mahmoud-walid/psx-profile/main/update.ps1' | iex"
 ```
 
 ---
@@ -64,7 +64,7 @@ pwsh -NoLogo -Command "irm 'https://raw.githubusercontent.com/<USER>/<REPO>/main
 ## 🧹 Uninstall
 
 ```powershell
-pwsh -NoLogo -Command "irm 'https://raw.githubusercontent.com/<USER>/<REPO>/main/uninstall.ps1' | iex"
+pwsh -NoLogo -Command "irm 'https://raw.githubusercontent.com/Mahmoud-walid/psx-profile/main/uninstall.ps1' | iex"
 ```
 
 ---

@@ -1,2 +1,2 @@
 # psx-profile
-A modern, extensible PowerShell 7 profile that adds logging, a dynamic welcome banner, aliases, theming, and quality-of-life enhancements — all installable with a single command.
+psx-profile is a fully-custom, extensible PowerShell 7 profile designed to enhance your terminal experience with session logging, a clean visual banner, helpful aliases, custom theming, and future workflow improvements. Built to be modular, fast, and easy to install with just one command.

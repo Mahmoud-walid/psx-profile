@@ -120,6 +120,61 @@ function Get-PowerShell7-Open-Logs {
 }
 
 # ────────────────────────────────
+# 📁 Folder Tree Function
+# ────────────────────────────────
+
+function Show-FolderTree {
+    [CmdletBinding()]
+    param (
+        [Parameter(Position=0, HelpMessage="Path of the folder to display")]
+        [string]$Path = (Get-Location),
+
+        [Parameter(HelpMessage="Folders to ignore, separated by comma")]
+        [string[]]$IgnoreFolders = @('node_modules'),
+
+        [Parameter(HelpMessage="Show help message")]
+        [switch]$Help,
+
+        [string]$Indent = "",
+        [bool]$IsLast = $true
+    )
+
+    if ($Help) {
+        Write-Host "Usage: Show-FolderTree [-Path <folderPath>] [-IgnoreFolders <folders>] [-Help]" -ForegroundColor Cyan
+        Write-Host ""
+        Write-Host "Examples:"
+        Write-Host "  Show-FolderTree"
+        Write-Host "  Show-FolderTree -Path C:\MyProject"
+        Write-Host "  Show-FolderTree -IgnoreFolders node_modules,.git"
+        return
+    }
+
+    # Fetch items excluding ignored folders
+    $items = Get-ChildItem -LiteralPath $Path -Force | Where-Object {
+        -not ($IgnoreFolders -contains $_.Name)
+    }
+
+    $count = $items.Count
+    $i = 0
+
+    foreach ($item in $items) {
+        $i++
+        $isLastItem = $i -eq $count
+
+        $branch = if ($isLastItem) { "└─" } else { "├─" }
+
+        if ($item.PSIsContainer) {
+            Write-Host "$Indent$branch $($item.Name)" -ForegroundColor Cyan
+            $newIndent = $Indent + ($isLastItem ? "   " : "│  ")
+            Show-FolderTree -Path $item.FullName -Indent $newIndent -IgnoreFolders $IgnoreFolders
+        }
+        else {
+            Write-Host "$Indent$branch $($item.Name)" -ForegroundColor Gray
+        }
+    }
+}
+
+# ────────────────────────────────
 # 💻 Fancy PowerShell Welcome Banner
 # ────────────────────────────────
 Clear-Host
@@ -313,6 +368,7 @@ function psx {
         return
     }
 }
+
 
 
 

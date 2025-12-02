@@ -1,86 +1,91 @@
+# ================================
+#      PowerShell 7 Updater
+# ================================
+$ErrorActionPreference = "Stop"
+
 Write-Host "`n⚡ Checking for latest PowerShell 7 release..." -ForegroundColor Cyan
 
 try {
-    $release = Invoke-RestMethod "https://api.github.com/repos/PowerShell/PowerShell/releases/latest" -ErrorAction Stop
+    $release = Invoke-RestMethod "https://api.github.com/repos/PowerShell/PowerShell/releases/latest"
 } catch {
-    Write-Host "❌ Failed to fetch release info: $_" -ForegroundColor Red
+    Write-Host "❌ Failed to fetch release info (Check Internet/Rate Limits)." -ForegroundColor Red
     exit 1
 }
 
 $assets = $release.assets
+$tag = $release.tag_name
 
-# Detect OS
-$os = $PSVersionTable.OS
-$isWindows = $env:OS -eq "Windows_NT"
-$isLinux   = $PSVersionTable.Platform -eq "Unix"
-$isMac     = $PSVersionTable.Platform -eq "MacOS"
+# Detect OS & Architecture
+$isRunningOnWindows = $PSVersionTable.OS -match "Windows"
+$isRunningOnLinux   = $PSVersionTable.Platform -eq "Unix" -and $PSVersionTable.OS -notmatch "Darwin"
+$isMac     = $PSVersionTable.OS -match "Darwin"
+$arch      = if ($env:PROCESSOR_ARCHITECTURE -match "ARM64") { "arm64" } else { "x64" }
 
-if ($isWindows) {
-    Write-Host "🪟 Detected OS: Windows" -ForegroundColor Yellow
-    $asset = $assets | Where-Object { $_.name -match "win-x64\.msi$" }
-}
-elseif ($isLinux) {
-    Write-Host "🐧 Detected OS: Linux" -ForegroundColor Yellow
+$downloadUrl = $null
+$packageName = $null
 
-    # Pick the correct package for your distro
-    if (Test-Path "/etc/debian_version") {
-        $asset = $assets | Where-Object { $_.name -match "linux-x64\.deb$" }
-    }
-    elseif (Test-Path "/etc/redhat-release") {
-        $asset = $assets | Where-Object { $_.name -match "linux-x64\.rpm$" }
-    }
-    else {
-        Write-Host "⚠ Unsupported Linux distro." -ForegroundColor Red
-        exit 1
+if ($isRunningOnWindows) {
+    Write-Host "🪟 OS: Windows ($arch)" -ForegroundColor Yellow
+    # Prefer MSI
+    $asset = $assets | Where-Object { $_.name -match "win-$arch\.msi$" } | Select-Object -First 1
+    if ($asset) {
+        $downloadUrl = $asset.browser_download_url
+        $packageName = $asset.name
     }
 }
 elseif ($isMac) {
-    Write-Host "🍎 Detected OS: macOS" -ForegroundColor Yellow
-    $asset = $assets | Where-Object { $_.name -match "osx-x64\.pkg$" }
+    Write-Host "🍎 OS: macOS ($arch)" -ForegroundColor Yellow
+    $asset = $assets | Where-Object { $_.name -match "osx-$arch\.pkg$" } | Select-Object -First 1
+    if ($asset) {
+        $downloadUrl = $asset.browser_download_url
+        $packageName = $asset.name
+    }
 }
-else {
-    Write-Host "❌ Unsupported OS" -ForegroundColor Red
+elseif ($isRunningOnLinux) {
+    Write-Host "🐧 OS: Linux ($arch)" -ForegroundColor Yellow
+    # Simple detection for deb/rpm
+    if (Test-Path "/etc/debian_version") {
+        $asset = $assets | Where-Object { $_.name -match "linux-$arch\.deb$" } | Select-Object -First 1
+    } elseif (Test-Path "/etc/redhat-release") {
+        $asset = $assets | Where-Object { $_.name -match "linux-$arch\.rpm$" } | Select-Object -First 1
+    }
+    
+    if ($asset) {
+        $downloadUrl = $asset.browser_download_url
+        $packageName = $asset.name
+    }
+}
+
+if (-not $downloadUrl) {
+    Write-Host "❌ Could not find a matching package for your OS/Arch." -ForegroundColor Red
     exit 1
 }
 
-if (-not $asset) {
-    Write-Host "❌ Could not find a matching PowerShell package for this OS." -ForegroundColor Red
-    exit 1
-}
+$tempDir = [System.IO.Path]::GetTempPath()
+$savePath = Join-Path $tempDir $packageName
 
-$downloadUrl = $asset.browser_download_url
-$downloadPath = Join-Path $env:TEMP $asset.name
+Write-Host "⬇ Downloading $packageName..." -ForegroundColor Cyan
+Invoke-WebRequest -Uri $downloadUrl -OutFile $savePath -UseBasicParsing
 
-Write-Host "⬇ Downloading: $($asset.name)" -ForegroundColor Cyan
+Write-Host "📦 Installing..." -ForegroundColor Cyan
+
 try {
-    Invoke-WebRequest -Uri $downloadUrl -OutFile $downloadPath -UseBasicParsing -ErrorAction Stop
-} catch {
-    Write-Host "❌ Download failed: $_" -ForegroundColor Red
-    exit 1
-}
-
-Write-Host "📦 Installing PowerShell 7..." -ForegroundColor Cyan
-
-try {
-    if ($isWindows) {
-        Start-Process msiexec.exe -ArgumentList "/i `"$downloadPath`" /qn /norestart" -Wait -ErrorAction Stop
-    }
-    elseif ($isLinux) {
-        if ($asset.name -match "\.deb$") {
-            sudo dpkg -i $downloadPath
-            sudo apt --fix-broken install -y
-        }
-        elseif ($asset.name -match "\.rpm$") {
-            sudo rpm -Uvh $downloadPath
+    if ($isRunningOnWindows) {
+        Start-Process msiexec.exe -ArgumentList "/i `"$savePath`" /qn /norestart" -Wait
+    } elseif ($isMac) {
+        sudo installer -pkg $savePath -target /
+    } elseif ($isRunningOnLinux) {
+        if ($packageName -match "\.deb$") {
+            sudo dpkg -i $savePath
+            sudo apt-get install -f -y
+        } elseif ($packageName -match "\.rpm$") {
+            sudo rpm -Uvh $savePath
         }
     }
-    elseif ($isMac) {
-        sudo installer -pkg $downloadPath -target /
-    }
+    Write-Host "✔ Update Complete: $tag" -ForegroundColor Green
 } catch {
     Write-Host "❌ Installation failed: $_" -ForegroundColor Red
     exit 1
+} finally {
+    if (Test-Path $savePath) { Remove-Item $savePath -Force -ErrorAction SilentlyContinue }
 }
-
-Write-Host "✔ PowerShell updated successfully to version $($release.tag_name)" -ForegroundColor Green
-Write-Host "🚀 Restart PowerShell to use the new version."

@@ -2,78 +2,43 @@
 #      PSX-PROFILE INSTALLER
 # ================================
 
+if (-not ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)) {
+    Write-Warning "For best results (installing fonts/winget), run as Administrator."
+}
+
 Write-Host "`n🚀 Starting PSX Profile Installation..." -ForegroundColor Cyan
 
-function Invoke-Safe {
-    param(
-        [Parameter(Mandatory)][string]$Message,
-        [Parameter(Mandatory)][scriptblock]$Action
-    )
-
-    Write-Host "➡ $Message" -ForegroundColor Yellow
-    try {
-        & $Action
-        Write-Host "✔ Done: $Message" -ForegroundColor Green
-    }
-    catch {
-        Write-Host "❌ ERROR during: $Message" -ForegroundColor Red
-        Write-Host $_.Exception.Message -ForegroundColor DarkRed
-        exit 1
-    }
+# Define Correct Profile Path for PowerShell 7
+$TargetProfile = $PROFILE.CurrentUserAllHosts
+if (-not $TargetProfile) { 
+    # Fallback if variable is empty
+    $TargetProfile = Join-Path ([Environment]::GetFolderPath("MyDocuments")) "PowerShell\Microsoft.PowerShell_profile.ps1"
 }
 
-# ------------------------------
-# 1️⃣ Ensure PS profile folder exists
-# ------------------------------
-Invoke-Safe -Message "Ensuring profile directory exists" -Action {
-    $profileDir = Split-Path $PROFILE
-    if (-not (Test-Path $profileDir)) {
-        New-Item -ItemType Directory -Force -Path $profileDir | Out-Null
-    }
-}
+# 1. Create Directory
+$profileDir = Split-Path $TargetProfile
+if (-not (Test-Path $profileDir)) { New-Item -ItemType Directory -Force -Path $profileDir | Out-Null }
 
-# ------------------------------
-# 2️⃣ Install Oh My Posh if missing
-# ------------------------------
+# 2. Install Oh My Posh
 if (-not (Get-Command oh-my-posh -ErrorAction SilentlyContinue)) {
-    Invoke-Safe -Message "Installing Oh My Posh via winget" -Action {
+    Write-Host "➡ Installing Oh My Posh..." -ForegroundColor Yellow
+    if (Get-Command winget -ErrorAction SilentlyContinue) {
         winget install JanDeDobbeleer.OhMyPosh -s winget --accept-package-agreements --accept-source-agreements
+    } else {
+        # Fallback installation method
+        Set-ExecutionPolicy Bypass -Scope Process -Force
+        Invoke-Expression (Invoke-RestMethod -Uri 'https://ohmyposh.dev/install.ps1')
     }
 }
-else {
-    Write-Host "✔ Oh My Posh already installed." -ForegroundColor Green
-}
 
-# ------------------------------
-# 3️⃣ Download official Oh My Posh theme
-# ------------------------------
-Invoke-Safe -Message "Downloading Paradox theme from Oh My Posh official repo" -Action {
+# 3. Download Theme
+$themeDir = "$env:LOCALAPPDATA\oh-my-posh-themes"
+if (-not (Test-Path $themeDir)) { New-Item -ItemType Directory -Force -Path $themeDir | Out-Null }
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/paradox.omp.json" -OutFile "$themeDir\paradox.omp.json" -UseBasicParsing
 
-    $themesPath = "$env:LOCALAPPDATA\oh-my-posh-themes"
-    if (-not (Test-Path $themesPath)) {
-        New-Item -ItemType Directory -Force -Path $themesPath | Out-Null
-    }
+# 4. Install Profile
+Write-Host "➡ Downloading Profile Script to: $TargetProfile" -ForegroundColor Yellow
+Invoke-WebRequest -Uri "https://raw.githubusercontent.com/Mahmoud-walid/psx-profile/main/Microsoft.PowerShell_profile.ps1" -OutFile $TargetProfile -UseBasicParsing
 
-    $themeUrl  = "https://raw.githubusercontent.com/JanDeDobbeleer/oh-my-posh/main/themes/paradox.omp.json"
-    $themeDest = "$themesPath\paradox.omp.json"
-
-    Invoke-WebRequest -Uri $themeUrl -OutFile $themeDest -UseBasicParsing
-}
-
-# ------------------------------
-# 4️⃣ Download your profile
-# ------------------------------
-Invoke-Safe -Message "Downloading your PowerShell profile script" -Action {
-    $profileUrl = "https://raw.githubusercontent.com/Mahmoud-walid/psx-profile/main/Microsoft.PowerShell_profile.ps1"
-    Invoke-WebRequest -Uri $profileUrl -OutFile $PROFILE -UseBasicParsing
-}
-
-# ------------------------------
-# 5️⃣ Reload profile
-# ------------------------------
-Invoke-Safe -Message "Reloading PowerShell profile" -Action {
-    . $PROFILE
-}
-
-Write-Host "`n🎉 PSX Profile Installed Successfully!" -ForegroundColor Cyan
-Write-Host "Restart PowerShell to enjoy your upgraded terminal." -ForegroundColor Cyan
+Write-Host "`n🎉 Installation Complete!" -ForegroundColor Green
+Write-Host "👉 Please restart your terminal or run: . `"$TargetProfile`"" -ForegroundColor Cyan

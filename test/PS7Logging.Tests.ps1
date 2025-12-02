@@ -3,21 +3,40 @@ Describe "🚀 PS7 Logging Tests" {
     BeforeAll {
         Write-Host "`n✨ Setting up Test Environment..." -ForegroundColor Cyan
         
+        # 1. Setup Paths
         $CurrentDir = $PSScriptRoot
         if ([string]::IsNullOrEmpty($CurrentDir)) { $CurrentDir = Get-Location }
 
         $script:testEnvPath = Join-Path $CurrentDir "test-output-env"
-        
         $parentDir = Split-Path -Parent $CurrentDir
         $script:ProfilePath = Join-Path $parentDir "Microsoft.PowerShell_profile.ps1"
-
         $script:OriginalAppData = $env:LOCALAPPDATA
         
+        # 2. Create Test Environment
         if (Test-Path $script:testEnvPath) { Remove-Item $script:testEnvPath -Recurse -Force -ErrorAction SilentlyContinue }
         New-Item -ItemType Directory -Path $script:testEnvPath -Force | Out-Null
-
         $env:LOCALAPPDATA = $script:testEnvPath
 
+        # =========================================================
+        # 🛡️ CI FIXES (Mocks to prevent Profile errors in GitHub Actions)
+        # =========================================================
+
+        # A. Fix for Linux: "oh-my-posh not found"
+        # We create a fake function so the profile doesn't crash when calling it.
+        function Global:oh-my-posh { return "Write-Host 'Oh-My-Posh Mocked'" }
+
+        # B. Fix for Windows: "The handle is invalid" (CursorPosition)
+        # The profile tries to animate the banner. We disable this by setting the name to empty.
+        # This stops the loop that manipulates the Console Cursor.
+        $Global:PSX_Name = "" 
+
+        # C. Fix for Headless Console: Mock Clear-Host
+        # Real consoles can clear; CI logs cannot.
+        function Global:Clear-Host { }
+
+        # =========================================================
+
+        # 3. Load Profile
         if (Test-Path $script:ProfilePath) {
             . $script:ProfilePath
         } else {

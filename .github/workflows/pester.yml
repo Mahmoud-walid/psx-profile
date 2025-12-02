@@ -9,25 +9,24 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        # Run tests on both Windows and Linux to ensure cross-platform compatibility
         os: [windows-latest, ubuntu-latest]
 
     steps:
       - name: Checkout Code
         uses: actions/checkout@v4
 
+      # FIX: The official action is 'powershell/setup-powershell', not 'actions/...'
       - name: Setup PowerShell
-        uses: actions/setup-powershell@v2
+        uses: powershell/setup-powershell@v1
 
       - name: Install Pester
         shell: pwsh
         run: |
-          # Install Pester in CurrentUser scope to avoid permission issues in CI
+          # Install Pester in CurrentUser scope
           Install-Module -Name Pester -Force -SkipPublisherCheck -Scope CurrentUser
 
       - name: Run Tests
         shell: pwsh
         run: |
-          # Run tests with detailed output
-          # -EnableExit is crucial: it forces the CI job to fail if any test fails
+          # Run tests with detailed output and exit code
           Invoke-Pester -Path ./test -OutputDetailed -EnableExit

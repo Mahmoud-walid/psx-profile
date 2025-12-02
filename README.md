@@ -27,9 +27,21 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; irm "https://raw.githubusercon
 
 ### Linux / macOS
 
-If you have PowerShell installed:
+**Step 1: Install PowerShell (if missing)**
 
-```powershell
+- **macOS (via Homebrew):**
+  ```bash
+  brew install powershell/tap/powershell
+  ```
+- **Linux (Ubuntu/Debian):**
+  ```bash
+  sudo apt-get update && sudo apt-get install -y powershell
+  ```
+  _(For other distros, see the [Microsoft Guide](https://learn.microsoft.com/en-us/powershell/scripting/install/installing-powershell-on-linux))_
+
+**Step 2: Run the Installer**
+
+```bash
 pwsh -c "irm 'https://raw.githubusercontent.com/Mahmoud-walid/psx-profile/main/installer.ps1' | iex"
 ```
 

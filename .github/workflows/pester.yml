@@ -15,18 +15,14 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
 
-      # FIX: The official action is 'powershell/setup-powershell', not 'actions/...'
-      - name: Setup PowerShell
-        uses: powershell/setup-powershell@v1
-
       - name: Install Pester
         shell: pwsh
         run: |
-          # Install Pester in CurrentUser scope
+          # Install Pester module
           Install-Module -Name Pester -Force -SkipPublisherCheck -Scope CurrentUser
 
       - name: Run Tests
         shell: pwsh
         run: |
-          # Run tests with detailed output and exit code
+          # Run tests using the pre-installed pwsh
           Invoke-Pester -Path ./test -OutputDetailed -EnableExit

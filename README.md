@@ -66,7 +66,7 @@ This profile comes with a built-in command `psx` to manage your environment easi
 Every session is logged to a JSON file with thread-safety (using Mutex to prevent conflicts when multiple tabs are open).
 
 - View logs: `Get-PowerShell7-Open-Logs` (or alias `pwsh-logs`).
-- Location: `%LOCALAPPDATA%\PS7Logs\ps7_open_logs.json`.
+- Location: `%LOCALAPPDATA%\PS7Logs` (Windows) or `~/.local/share/PS7Logs` (Linux/macOS).
 
 ### 📂 Folder Tree Visualization
 
@@ -96,11 +96,15 @@ Show-FolderTree -Path . -IgnoreFolders node_modules,.git,bin
 The profile creates the following structure:
 
 ```text
-User Home/
-├── .config/powershell/Microsoft.PowerShell_profile.ps1  # Main Script
-AppData/Local/ (or ~/.local/share/)
-├── PS7Logs/ps7_open_logs.json                           # Session Logs
-└── oh-my-posh-themes/paradox.omp.json                   # Theme Config
+# Windows
+Documents/PowerShell/Microsoft.PowerShell_profile.ps1
+AppData/Local/PS7Logs/ps7_open_logs.json
+AppData/Local/oh-my-posh-themes/paradox.omp.json
+
+# Linux / macOS
+~/.config/powershell/Microsoft.PowerShell_profile.ps1
+~/.local/share/PS7Logs/ps7_open_logs.json
+~/.local/share/oh-my-posh-themes/paradox.omp.json
 ```
 
 ---

@@ -6,6 +6,7 @@ $ErrorActionPreference = "Stop"
 Write-Host "`n⚡ Checking for latest PowerShell 7 release..." -ForegroundColor Cyan
 
 try {
+    # Fetch latest release data from GitHub API
     $release = Invoke-RestMethod "https://api.github.com/repos/PowerShell/PowerShell/releases/latest"
 } catch {
     Write-Host "❌ Failed to fetch release info (Check Internet/Rate Limits)." -ForegroundColor Red
@@ -15,35 +16,42 @@ try {
 $assets = $release.assets
 $tag = $release.tag_name
 
-# Detect OS & Architecture
-$isRunningOnWindows = $PSVersionTable.OS -match "Windows"
-$isRunningOnLinux   = $PSVersionTable.Platform -eq "Unix" -and $PSVersionTable.OS -notmatch "Darwin"
-$isMac     = $PSVersionTable.OS -match "Darwin"
-$arch      = if ($env:PROCESSOR_ARCHITECTURE -match "ARM64") { "arm64" } else { "x64" }
+# 1️⃣ Detect OS (Standardized Names)
+$IsRunningOnWindows = $PSVersionTable.OS -match "Windows"
+$IsRunningOnMacOS   = $PSVersionTable.OS -match "Darwin"
+$IsRunningOnLinux   = $PSVersionTable.Platform -eq "Unix" -and -not $IsRunningOnMacOS
+
+# 2️⃣ Detect Architecture (Cross-Platform Safe)
+# $env:PROCESSOR_ARCHITECTURE isn't always reliable on Linux/Mac, so we use .NET
+$arch = "x64" # Default
+if ([System.Runtime.InteropServices.RuntimeInformation]::OSArchitecture -eq [System.Runtime.InteropServices.Architecture]::Arm64) {
+    $arch = "arm64"
+}
 
 $downloadUrl = $null
 $packageName = $null
 
-if ($isRunningOnWindows) {
-    Write-Host "🪟 OS: Windows ($arch)" -ForegroundColor Yellow
-    # Prefer MSI
+# 3️⃣ Select Correct Asset
+if ($IsRunningOnWindows) {
+    Write-Host "🪟 Detected OS: Windows ($arch)" -ForegroundColor Yellow
     $asset = $assets | Where-Object { $_.name -match "win-$arch\.msi$" } | Select-Object -First 1
     if ($asset) {
         $downloadUrl = $asset.browser_download_url
         $packageName = $asset.name
     }
 }
-elseif ($isMac) {
-    Write-Host "🍎 OS: macOS ($arch)" -ForegroundColor Yellow
+elseif ($IsRunningOnMacOS) {
+    Write-Host "🍎 Detected OS: macOS ($arch)" -ForegroundColor Yellow
     $asset = $assets | Where-Object { $_.name -match "osx-$arch\.pkg$" } | Select-Object -First 1
     if ($asset) {
         $downloadUrl = $asset.browser_download_url
         $packageName = $asset.name
     }
 }
-elseif ($isRunningOnLinux) {
-    Write-Host "🐧 OS: Linux ($arch)" -ForegroundColor Yellow
-    # Simple detection for deb/rpm
+elseif ($IsRunningOnLinux) {
+    Write-Host "🐧 Detected OS: Linux ($arch)" -ForegroundColor Yellow
+    
+    # Detect Distro Type
     if (Test-Path "/etc/debian_version") {
         $asset = $assets | Where-Object { $_.name -match "linux-$arch\.deb$" } | Select-Object -First 1
     } elseif (Test-Path "/etc/redhat-release") {
@@ -57,24 +65,26 @@ elseif ($isRunningOnLinux) {
 }
 
 if (-not $downloadUrl) {
-    Write-Host "❌ Could not find a matching package for your OS/Arch." -ForegroundColor Red
+    Write-Host "❌ Could not find a matching PowerShell package for your OS/Arch." -ForegroundColor Red
     exit 1
 }
 
+# 4️⃣ Download
 $tempDir = [System.IO.Path]::GetTempPath()
 $savePath = Join-Path $tempDir $packageName
 
 Write-Host "⬇ Downloading $packageName..." -ForegroundColor Cyan
 Invoke-WebRequest -Uri $downloadUrl -OutFile $savePath -UseBasicParsing
 
+# 5️⃣ Install
 Write-Host "📦 Installing..." -ForegroundColor Cyan
 
 try {
-    if ($isRunningOnWindows) {
+    if ($IsRunningOnWindows) {
         Start-Process msiexec.exe -ArgumentList "/i `"$savePath`" /qn /norestart" -Wait
-    } elseif ($isMac) {
+    } elseif ($IsRunningOnMacOS) {
         sudo installer -pkg $savePath -target /
-    } elseif ($isRunningOnLinux) {
+    } elseif ($IsRunningOnLinux) {
         if ($packageName -match "\.deb$") {
             sudo dpkg -i $savePath
             sudo apt-get install -f -y
@@ -83,6 +93,7 @@ try {
         }
     }
     Write-Host "✔ Update Complete: $tag" -ForegroundColor Green
+    Write-Host "🚀 Please restart your terminal to use the new version." -ForegroundColor Cyan
 } catch {
     Write-Host "❌ Installation failed: $_" -ForegroundColor Red
     exit 1

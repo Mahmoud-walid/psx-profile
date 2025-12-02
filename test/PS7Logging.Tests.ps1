@@ -8,42 +8,58 @@ Describe "🚀 PS7 Logging Tests" {
         if ([string]::IsNullOrEmpty($CurrentDir)) { $CurrentDir = Get-Location }
 
         $script:testEnvPath = Join-Path $CurrentDir "test-output-env"
-        $parentDir = Split-Path -Parent $CurrentDir
-        $script:ProfilePath = Join-Path $parentDir "Microsoft.PowerShell_profile.ps1"
-        $script:OriginalAppData = $env:LOCALAPPDATA
+        $ProjectRoot = Split-Path -Parent $CurrentDir
         
-        # 2. Create Test Environment
+        # 2. Determine Correct Profile File based on OS
+        $IsRunningOnWindows = $PSVersionTable.OS -match "Windows"
+        $IsRunningOnMacOS   = $PSVersionTable.OS -match "Darwin"
+        
+        if ($IsRunningOnWindows) {
+            $ProfileName = "Microsoft.PowerShell_profile.windows.ps1"
+        } elseif ($IsRunningOnMacOS) {
+            $ProfileName = "Microsoft.PowerShell_profile.macos.ps1"
+        } else {
+            $ProfileName = "Microsoft.PowerShell_profile.linux.ps1"
+        }
+
+        # Point to the new profiles folder
+        $script:ProfilePath = Join-Path $ProjectRoot "profiles/$ProfileName"
+        
+        Write-Host "📂 Loading Profile: $ProfileName" -ForegroundColor Gray
+
+        # 3. Create Test Environment
+        $script:OriginalAppData = $env:LOCALAPPDATA
         if (Test-Path $script:testEnvPath) { Remove-Item $script:testEnvPath -Recurse -Force -ErrorAction SilentlyContinue }
         New-Item -ItemType Directory -Path $script:testEnvPath -Force | Out-Null
+        
+        # Mocking Paths
         $env:LOCALAPPDATA = $script:testEnvPath
+        # For Unix profiles using XDG/HOME
+        $env:XDG_DATA_HOME = $script:testEnvPath
+        $env:HOME = $script:testEnvPath 
 
         # =========================================================
-        # 🛡️ CI FIXES (Mocks to prevent Profile errors in GitHub Actions)
+        # 🛡️ CI FIXES
         # =========================================================
-
-        # A. Fix for Linux: "oh-my-posh not found"
-        # We create a fake function so the profile doesn't crash when calling it.
         function Global:oh-my-posh { return "Write-Host 'Oh-My-Posh Mocked'" }
-
-        # B. Fix for Windows: "The handle is invalid" (CursorPosition)
-        # The profile tries to animate the banner. We disable this by setting the name to empty.
-        # This stops the loop that manipulates the Console Cursor.
         $Global:PSX_Name = "" 
-
-        # C. Fix for Headless Console: Mock Clear-Host
-        # Real consoles can clear; CI logs cannot.
         function Global:Clear-Host { }
-
         # =========================================================
 
-        # 3. Load Profile
+        # 4. Load Profile
         if (Test-Path $script:ProfilePath) {
             . $script:ProfilePath
         } else {
             Throw "Could not find profile file at: $script:ProfilePath"
         }
 
-        $script:TestLogFile = Join-Path $script:testEnvPath "PS7Logs\ps7_open_logs.json"
+        # Determine Log Path based on OS logic in profile
+        if ($IsRunningOnWindows) {
+            $script:TestLogFile = Join-Path $script:testEnvPath "PS7Logs\ps7_open_logs.json"
+        } else {
+            # Linux profile uses XDG_DATA_HOME/PS7Logs
+            $script:TestLogFile = Join-Path $script:testEnvPath "PS7Logs/ps7_open_logs.json"
+        }
     }
 
     It "📝 Should create log file automatically on load" {
@@ -77,9 +93,7 @@ Describe "🚀 PS7 Logging Tests" {
     }
 
     AfterAll {
-        if ($script:OriginalAppData) {
-            $env:LOCALAPPDATA = $script:OriginalAppData
-        }
+        if ($script:OriginalAppData) { $env:LOCALAPPDATA = $script:OriginalAppData }
         
         if ($script:testEnvPath -and (Test-Path $script:testEnvPath)) { 
             Remove-Item $script:testEnvPath -Recurse -Force -ErrorAction SilentlyContinue 

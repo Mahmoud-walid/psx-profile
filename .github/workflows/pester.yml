@@ -18,12 +18,16 @@ jobs:
       - name: Install Pester
         shell: pwsh
         run: |
-          # Install Pester module in CurrentUser scope to avoid conflicts
-          Install-Module -Name Pester -Force -SkipPublisherCheck -Scope CurrentUser
+          # Force install/update Pester in CurrentUser scope
+          Install-Module -Name Pester -Force -SkipPublisherCheck -Scope CurrentUser -AllowClobber
 
       - name: Run Tests
         shell: pwsh
         run: |
-          # FIX: Changed '-OutputDetailed' to '-Output Detailed'
-          # -EnableExit ensures the pipeline fails if tests fail
-          Invoke-Pester -Path ./test -Output Detailed -EnableExit
+          # Use Pester Configuration object to avoid parameter set conflicts
+          $config = New-PesterConfiguration
+          $config.Run.Path = "./test"
+          $config.Run.Exit = $true
+          $config.Output.Verbosity = "Detailed"
+
+          Invoke-Pester -Configuration $config

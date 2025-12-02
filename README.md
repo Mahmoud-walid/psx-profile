@@ -9,7 +9,9 @@ Built to be **fast**, **safe** (thread-safe logging), and **easy to install**.
 ![License](https://img.shields.io/badge/license-MIT-green.svg)
 ![PowerShell](https://img.shields.io/badge/PowerShell-7.2%2B-blue)
 ![Platform](https://img.shields.io/badge/platform-Windows%20%7C%20Linux%20%7C%20macOS-lightgrey)
-![Status](https://img.shields.io/badge/status-Stable-brightgreen)
+[![PSX CI](https://github.com/Mahmoud-walid/psx-profile/actions/workflows/pester.yml/badge.svg)](https://github.com/Mahmoud-walid/psx-profile/actions/workflows/pester.yml)
+[![PRs Welcome](https://img.shields.io/badge/PRs-welcome-brightgreen.svg?style=flat-square)](https://github.com/Mahmoud-walid/psx-profile/pulls)
+![Last Commit](https://img.shields.io/github/last-commit/Mahmoud-walid/psx-profile)
 
 ---
 
